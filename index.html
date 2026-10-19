@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Journal Entry Practice</title>
+<style>
+:root{--paper:#e9f1e7;--sheet:#f8fbf6;--ink:#1c2a3a;--rule:#b9cdb8;--red:#b3342b;--ok:#1f7a45;--mute:#5b6b7a}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.55 Georgia,"Times New Roman",serif}
+#app{max-width:760px;margin:0 auto;padding:20px 14px 60px}
+h1{font-size:1.7rem;margin:.2em 0}h2{font-size:1.2rem;margin:.2em 0}
+.sheet{background:var(--sheet);border:1px solid var(--rule);border-left:3px solid var(--red);padding:18px;margin:14px 0;
+background-image:repeating-linear-gradient(transparent 0 31px,var(--rule) 31px 32px)}
+.sheet.plain{background-image:none}
+label{display:block;margin:10px 0 4px;font-weight:bold}
+select,input{font:inherit;padding:7px;border:1px solid var(--ink);background:#fff;color:var(--ink);border-radius:3px;max-width:100%}
+button{font:inherit;padding:9px 16px;border:1px solid var(--ink);background:var(--ink);color:#fff;border-radius:3px;cursor:pointer;margin:4px 6px 4px 0}
+button.alt{background:transparent;color:var(--ink)}button:disabled{opacity:.4}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid var(--red);outline-offset:1px}
+.row{display:grid;grid-template-columns:1fr 110px 110px 34px;gap:6px;margin:6px 0}
+.row select,.row input{width:100%}
+.head{font-weight:bold;font-size:.9rem;color:var(--mute)}
+table{width:100%;border-collapse:collapse;background:#fff;margin:8px 0}
+td,th{border-bottom:1px solid var(--rule);padding:6px 8px;text-align:left}
+th{font-size:.9rem;color:var(--mute)}td.n,th.n{text-align:right;border-left:1px solid var(--rule);width:100px}
+.cr{padding-left:28px}.ok{color:var(--ok);font-weight:bold}.bad{color:var(--red);font-weight:bold}
+.msg{color:var(--red);min-height:1.4em}.tag{font-size:.9rem;color:var(--mute)}
+.big{font-size:2.6rem;font-weight:bold;margin:0}.bar{height:8px;background:var(--rule);border-radius:4px;margin:4px 0 10px}
+.bar i{display:block;height:100%;background:var(--ok);border-radius:4px}
+@media(max-width:520px){.row{grid-template-columns:1fr 1fr 1fr 34px}.row select:first-child{grid-column:1/5}.row button{grid-column:4}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+const ACC=["Cash","Accounts Receivable","Inventory","Supplies","Prepaid Insurance","Equipment","Accumulated Depreciation","Accounts Payable","Notes Payable","Salaries Payable","Unearned Revenue","Owner's Capital","Owner's Drawings","Service Revenue","Sales Revenue","Cost of Goods Sold","Rent Expense","Salaries Expense","Utilities Expense","Supplies Expense","Insurance Expense","Depreciation Expense"];
+// [category, level(1 basic / 2 intermediate), description, [[account, D/C, amount]...], explanation]
+const Q=[
+["Equity & Financing",1,"The owner invests $20,000 cash to start the business.",[["Cash","D",20000],["Owner's Capital","C",20000]],"Cash (asset) increases with a debit. Owner's Capital (equity) increases with a credit."],
+["Equity & Financing",1,"The owner withdraws $1,000 cash for personal use.",[["Owner's Drawings","D",1000],["Cash","C",1000]],"Drawings reduce equity, so they are debited. Cash decreases with a credit."],
+["Equity & Financing",1,"The business borrows $10,000 from the bank by signing a note.",[["Cash","D",10000],["Notes Payable","C",10000]],"Cash increases (debit); a liability increases (credit)."],
+["Operations",1,"Purchased equipment for $5,000 cash.",[["Equipment","D",5000],["Cash","C",5000]],"One asset increases (debit) while another decreases (credit)."],
+["Operations",1,"Purchased supplies on account for $800.",[["Supplies","D",800],["Accounts Payable","C",800]],"Supplies is an asset (debit). Buying on credit creates a liability (credit)."],
+["Operations",1,"Earned $3,000 service revenue in cash.",[["Cash","D",3000],["Service Revenue","C",3000]],"Cash increases (debit); revenue increases with a credit."],
+["Operations",1,"Provided services to a customer on account for $2,500.",[["Accounts Receivable","D",2500],["Service Revenue","C",2500]],"Revenue is earned when the service is performed, even if cash comes later."],
+["Operations",1,"Collected $2,500 cash from a customer on account.",[["Cash","D",2500],["Accounts Receivable","C",2500]],"No revenue now. One asset replaces another."],
+["Operations",1,"Paid $800 cash on an account payable.",[["Accounts Payable","D",800],["Cash","C",800]],"Paying a liability decreases it (debit) and reduces cash (credit)."],
+["Operations",1,"Paid rent of $1,200 cash.",[["Rent Expense","D",1200],["Cash","C",1200]],"Expenses increase with a debit."],
+["Operations",1,"Paid salaries of $2,000 cash.",[["Salaries Expense","D",2000],["Cash","C",2000]],"Salaries Expense is debited; Cash is credited."],
+["Operations",1,"Paid the $350 utility bill in cash.",[["Utilities Expense","D",350],["Cash","C",350]],"Expenses increase with a debit."],
+["Operations",1,"Received $1,500 cash in advance from a customer for services to be performed later.",[["Cash","D",1500],["Unearned Revenue","C",1500]],"The service is not yet performed, so the advance is a liability, not revenue."],
+["Operations",2,"Purchased equipment for $12,000: paid $4,000 cash and signed a note for the rest.",[["Equipment","D",12000],["Cash","C",4000],["Notes Payable","C",8000]],"Compound entry: total debits $12,000 = credits $4,000 + $8,000."],
+["Operations",2,"Performed services for $3,000: received $1,000 cash, the rest is on account.",[["Cash","D",1000],["Accounts Receivable","D",2000],["Service Revenue","C",3000]],"Compound entry with two debits and one credit."],
+["Merchandise",1,"Purchased inventory on account for $4,000 (perpetual system).",[["Inventory","D",4000],["Accounts Payable","C",4000]],"Under the perpetual system, purchases go straight into Inventory."],
+["Merchandise",2,"Sold goods for $6,000 cash.",[["Cash","D",6000],["Sales Revenue","C",6000]],"Record the sale at the selling price. The cost is recorded in a separate entry."],
+["Merchandise",2,"The goods sold for $6,000 had cost $3,500. Record the cost of the sale.",[["Cost of Goods Sold","D",3500],["Inventory","C",3500]],"Perpetual system: expense the cost and reduce Inventory."],
+["Adjusting",1,"Oct 1: Paid $2,400 cash for a 12-month insurance policy.",[["Prepaid Insurance","D",2400],["Cash","C",2400]],"Insurance paid in advance is an asset (prepaid)."],
+["Adjusting",2,"Adjusting entry: $200 of prepaid insurance has expired.",[["Insurance Expense","D",200],["Prepaid Insurance","C",200]],"Move the used portion from the asset to expense."],
+["Adjusting",2,"Adjusting entry: supplies of $800 were purchased; $300 remain on hand at period end.",[["Supplies Expense","D",500],["Supplies","C",500]],"Used = $800 - $300 = $500."],
+["Adjusting",2,"Adjusting entry: record $1,000 depreciation on equipment.",[["Depreciation Expense","D",1000],["Accumulated Depreciation","C",1000]],"Accumulated Depreciation is a contra-asset with a credit balance."],
+["Adjusting",2,"Adjusting entry: $900 of salaries have been earned by employees but not yet paid.",[["Salaries Expense","D",900],["Salaries Payable","C",900]],"Accrued expense: recognize the expense and a liability."],
+["Adjusting",2,"Adjusting entry: $500 of previously unearned revenue has now been earned.",[["Unearned Revenue","D",500],["Service Revenue","C",500]],"The liability decreases (debit) and revenue is recognized (credit)."]
+];
+const CATS=[...new Set(Q.map(q=>q[0]))];
+const $=id=>document.getElementById(id), fmt=n=>"$"+n.toLocaleString();
+let S={};
+function load(){try{return JSON.parse(localStorage.getItem("jePractice"))||{hist:[],wrong:[],best:0}}catch(e){return{hist:[],wrong:[],best:0}}}
+function save(d){try{localStorage.setItem("jePractice",JSON.stringify(d))}catch(e){}}
+function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+
+function setup(){
+  const d=load();
+  $("app").innerHTML=`<h1>Journal Entry Practice</h1><p class="tag">Introductory accounting. Read the transaction, then write the journal entry.</p>
+  <div class="sheet"><label for="cat">Category</label><select id="cat"><option value="">All categories</option>${CATS.map(c=>`<option>${c}</option>`).join("")}</select>
+  <label for="lvl">Difficulty</label><select id="lvl"><option value="0">All levels</option><option value="1">Basic (one debit, one credit)</option><option value="2">Intermediate (compound and adjusting)</option></select>
+  <label for="cnt">Number of questions</label><select id="cnt"><option>5</option><option selected>10</option><option>20</option></select>
+  <p><button onclick="start('normal')">Start practice</button><button class="alt" onclick="start('wrong')" ${d.wrong.length?"":"disabled"}>Redo wrong answers (${d.wrong.length})</button></p></div>
+  <div class="sheet plain"><h2>Your record</h2><p>Sessions completed: ${d.hist.length}<br>Best score: ${d.best}%<br>${d.hist.length?"Last score: "+d.hist[d.hist.length-1].pct+"%":"No sessions yet."}</p>
+  <button class="alt" onclick="if(confirm('Clear all saved records?')){save({hist:[],wrong:[],best:0});setup()}">Clear records</button></div>`;
+}
+function start(mode){
+  const d=load(),cat=$("cat").value,lvl=+$("lvl").value,n=+$("cnt").value;
+  let idx=Q.map((q,i)=>i);
+  if(mode==="wrong")idx=d.wrong.slice();
+  else idx=idx.filter(i=>(!cat||Q[i][0]===cat)&&(!lvl||Q[i][1]===lvl));
+  if(!idx.length){alert("No questions match those filters.");return}
+  S={mode,qs:shuffle(idx).slice(0,mode==="wrong"?idx.length:n),i:0,pts:0,res:[]};
+  question();
+}
+function newRows(){S.rows=[{a:"",s:"D",m:""},{a:"",s:"C",m:""}];S.hint=false}
+function question(){
+  newRows();draw();
+}
+function draw(msg){
+  const q=Q[S.qs[S.i]];
+  $("app").innerHTML=`<p class="tag">Question ${S.i+1} of ${S.qs.length} &middot; ${q[0]}</p>
+  <div class="sheet plain"><h2>${q[2]}</h2></div>
+  <div class="sheet"><div class="row head"><span>Account</span><span>Debit / Credit</span><span>Amount</span><span></span></div>
+  ${S.rows.map((r,i)=>`<div class="row"><select aria-label="Account" onchange="S.rows[${i}].a=this.value"><option value="">Choose account</option>${ACC.map(a=>`<option ${a===r.a?"selected":""} value="${a}">${a}</option>`).join("")}</select>
+  <select aria-label="Debit or credit" onchange="S.rows[${i}].s=this.value"><option value="D" ${r.s==="D"?"selected":""}>Debit</option><option value="C" ${r.s==="C"?"selected":""}>Credit</option></select>
+  <input aria-label="Amount" type="number" min="0" inputmode="numeric" placeholder="0" value="${r.m}" oninput="S.rows[${i}].m=this.value">
+  <button class="alt" aria-label="Remove line" onclick="S.rows.splice(${i},1);draw()" ${S.rows.length<=1?"disabled":""}>&times;</button></div>`).join("")}
+  <button class="alt" onclick="S.rows.push({a:'',s:'D',m:''});draw()">Add line</button>
+  <button class="alt" onclick="S.hint=true;draw()">Show hint</button>
+  ${S.hint?`<p class="tag">Hint: this entry uses ${q[3].map(l=>l[0]).join(", ")}. (Half credit at most.)</p>`:""}
+  <p class="msg" role="alert">${msg||""}</p><button onclick="submit()">Check my entry</button></div>`;
+}
+function submit(){
+  const rows=S.rows.filter(r=>r.a||r.m).map(r=>({a:r.a,s:r.s,m:+r.m}));
+  if(!rows.length||rows.some(r=>!r.a||!(r.m>0)))return draw("Every line needs an account and an amount above 0.");
+  const dr=rows.filter(r=>r.s==="D").reduce((t,r)=>t+r.m,0),cr=rows.filter(r=>r.s==="C").reduce((t,r)=>t+r.m,0);
+  if(dr!==cr)return draw(`Debits (${fmt(dr)}) must equal credits (${fmt(cr)}).`);
+  const qi=S.qs[S.i],q=Q[qi],used=new Set();let hit=0;
+  rows.forEach(r=>{const k=q[3].findIndex((e,j)=>!used.has(j)&&e[0]===r.a&&e[1]===r.s&&e[2]===r.m);r.ok=k>=0;if(k>=0){used.add(k);hit++}});
+  let sc=hit/Math.max(q[3].length,rows.length);if(S.hint)sc=Math.min(sc,.5);
+  const full=hit===q[3].length&&rows.length===q[3].length;
+  S.pts+=sc;S.res.push({qi,sc,full});
+  const d=load();d.wrong=d.wrong.filter(x=>x!==qi);if(!full)d.wrong.push(qi);save(d);
+  const show=(l,cls)=>`<tr><td class="${cls||""}">${l[1]==="C"?`<span class="cr">${l[0]}</span>`:l[0]}</td><td class="n">${l[1]==="D"?fmt(l[2]):""}</td><td class="n">${l[1]==="C"?fmt(l[2]):""}</td></tr>`;
+  const sorted=a=>a.slice().sort((x,y)=>(x[1]==="C")-(y[1]==="C"));
+  $("app").innerHTML=`<p class="tag">Question ${S.i+1} of ${S.qs.length}</p><div class="sheet plain"><h2>${q[2]}</h2>
+  <p class="${full?"ok":"bad"}">${full?"Correct!":"Not quite. You got "+hit+" of "+q[3].length+" lines right."} Score: ${Math.round(sc*100)}%</p>
+  <h2>Your entry</h2><table><tr><th>Account</th><th class="n">Debit</th><th class="n">Credit</th></tr>${sorted(rows.map(r=>[r.a,r.s,r.m,r.ok])).map((l,i)=>{const r=sorted(rows)[i];return show(l,r.ok?"ok":"bad").replace("</td><td class=\"n\">",(r.ok?" ✓":" ✗")+"</td><td class=\"n\">")}).join("")}</table>
+  <h2>Correct entry</h2><table><tr><th>Account</th><th class="n">Debit</th><th class="n">Credit</th></tr>${sorted(q[3]).map(l=>show(l)).join("")}</table>
+  <p><b>Why:</b> ${q[4]}</p><button onclick="next()">${S.i+1<S.qs.length?"Next question":"See results"}</button></div>`;
+}
+function next(){S.i++;S.i<S.qs.length?question():result()}
+function result(){
+  const pct=Math.round(S.pts/S.qs.length*100),d=load();
+  d.hist.push({pct,date:new Date().toLocaleDateString(),n:S.qs.length});d.best=Math.max(d.best,pct);save(d);
+  const by={};S.res.forEach(r=>{const c=Q[r.qi][0];by[c]=by[c]||[0,0];by[c][0]+=r.sc;by[c][1]++});
+  const wrong=S.res.filter(r=>!r.full);
+  $("app").innerHTML=`<h1>Results</h1><div class="sheet plain"><p class="big">${pct}%</p><p>${S.res.filter(r=>r.full).length} of ${S.qs.length} fully correct. Best score: ${d.best}%</p></div>
+  <div class="sheet plain"><h2>By category</h2>${Object.entries(by).map(([c,v])=>{const p=Math.round(v[0]/v[1]*100);return `<div>${c}: ${p}%</div><div class="bar"><i style="width:${p}%"></i></div>`}).join("")}</div>
+  <div class="sheet plain"><h2>Questions to review</h2>${wrong.length?"<ul>"+wrong.map(r=>`<li>${Q[r.qi][2]}</li>`).join("")+"</ul>":"<p>None. Every entry was correct.</p>"}</div>
+  <button onclick="setup()">Back to start</button>`;
+}
+setup();
+</script>
+</body>
+</html>
